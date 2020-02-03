@@ -75,8 +75,12 @@ func Mutate(
 			muts[i] = m.String()
 		}
 
+		var mutsStr = strings.Join(muts, "\n")
+		mutsStr = strings.Replace(mutsStr, `\n`, "\n", -1)
+		mutsStr = strings.Replace(mutsStr, `\t`, "\t", -1)
+		mutsStr = strings.Replace(mutsStr, `\"`, "\"", -1)
 		glog.Infof("Executing Dgraph mutation; with\nQuery: \n%s\nMutations:%s",
-			queryStr, strings.Join(muts, "\n"))
+			queryStr, mutsStr)
 	}
 
 	req := &dgoapi.Request{
