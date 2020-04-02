@@ -1,0 +1,924 @@
+-
+  name: "Update set mutation with variables"
+  gqlmutation: |
+    mutation updatePost($patch: UpdatePostInput!) {
+      updatePost(input: $patch) {
+        post {
+          postID
+        }
+      }
+    }
+  gqlvariables: |
+    { "patch":
+      { "filter": {
+          "postID": ["0x123", "0x124"]
+        },
+        "set": {
+          "text": "updated text"
+        }
+      }
+    }
+  explanation: "The update patch should get rewritten into the Dgraph set mutation"
+  dgmutations:
+    - setjson: |
+        { "uid" : "uid(x)",
+          "Post.text": "updated text"
+        }
+      cond: "@if(gt(len(x), 0))"
+  dgquery: |-
+    query {
+      x as updatePost(func: type(Post)) @filter(uid(0x123, 0x124)) {
+        uid
+      }
+    }
+
+-
+  name: "Update remove mutation with variables and value"
+  gqlmutation: |
+    mutation updatePost($patch: UpdatePostInput!) {
+      updatePost(input: $patch) {
+        post {
+          postID
+        }
+      }
+    }
+  gqlvariables: |
+    { "patch":
+      { "filter": {
+          "postID": ["0x123", "0x124"]
+        },
+        "remove": {
+          "text": "delete this text"
+        }
+      }
+    }
+  explanation: "The update patch should get rewritten into the Dgraph delete mutation"
+  dgmutations:
+    - deletejson: |
+        { "uid" : "uid(x)",
+          "Post.text": "delete this text"
+        }
+      cond: "@if(gt(len(x), 0))"
+  dgquery: |-
+    query {
+      x as updatePost(func: type(Post)) @filter(uid(0x123, 0x124)) {
+        uid
+      }
+    }
+
+-
+  name: "Update delete mutation with variables and null"
+  gqlmutation: |
+    mutation updatePost($patch: UpdatePostInput!) {
+      updatePost(input: $patch) {
+        post {
+          postID
+        }
+      }
+    }
+  gqlvariables: |
+    { "patch":
+      { "filter": {
+          "postID": ["0x123", "0x124"]
+        },
+        "remove": {
+          "text": null
+        }
+      }
+    }
+  explanation: "The update patch should get rewritten into the Dgraph mutation"
+  dgmutations:
+    - deletejson: |
+        { "uid" : "uid(x)",
+          "Post.text": null
+        }
+      cond: "@if(gt(len(x), 0))"
+  dgquery: |-
+    query {
+      x as updatePost(func: type(Post)) @filter(uid(0x123, 0x124)) {
+        uid
+      }
+    }
+
+-
+  name: "Update mutation for a type that implements an interface"
+  gqlmutation: |
+    mutation updateHuman($patch: UpdateHumanInput!) {
+      updateHuman(input: $patch) {
+        human {
+          name
+          dob
+          female
+        }
+      }
+    }
+  gqlvariables: |
+    { "patch":
+      {
+        "filter": {
+          "id": ["0x123"]
+        },
+        "set": { "name": "Bob",
+          "dob": "2000-01-01",
+          "female": true,
+          "ename": "employee no. 1"
+        }
+      }
+    }
+  explanation: "The mutation should get rewritten with correct edges from the interface."
+  dgmutations:
+    - setjson: |
+        { "uid" : "uid(x)",
+          "Character.name": "Bob",
+          "Employee.ename": "employee no. 1",
+          "Human.dob": "2000-01-01",
+          "Human.female": true
+        }
+      cond: "@if(gt(len(x), 0))"
+  dgquery: |-
+    query {
+      x as updateHuman(func: type(Human)) @filter(uid(0x123)) {
+        uid
+      }
+    }
+
+-
+  name: "Update mutation for an interface"
+  gqlmutation: |-
+    mutation {
+      updateCharacter(input: {filter: { id: ["0x123"] }, set: {name:"Bob"}}) {
+        character {
+          id
+          name
+        }
+      }
+    }
+  explanation: "The mutation should get rewritten with correct edges from the interface."
+  dgmutations:
+    - setjson: |
+        { "uid" : "uid(x)",
+          "Character.name": "Bob"
+        }
+      cond: "@if(gt(len(x), 0))"
+  dgquery: |-
+    query {
+      x as updateCharacter(func: type(Character)) @filter(uid(0x123)) {
+        uid
+      }
+    }
+
+-
+  name: "Update mutation using filters"
+  gqlmutation: |
+    mutation updatePost($patch: UpdatePostInput!) {
+      updatePost(input: $patch) {
+        post {
+          postID
+        }
+      }
+    }
+  gqlvariables: |
+    { "patch":
+      { "filter": {
+          "tags": { "eq": "foo"}
+        },
+        "set": {
+          "text": "updated text"
+        }
+      }
+    }
+  explanation: "The update patch should get rewritten into the Dgraph mutation"
+  dgmutations:
+    - setjson: |
+        { "uid" : "uid(x)",
+          "Post.text": "updated text"
+        }
+      cond: "@if(gt(len(x), 0))"
+  dgquery: |-
+    query {
+      x as updatePost(func: type(Post)) @filter(eq(Post.tags, "foo")) {
+        uid
+      }
+    }
+
+-
+  name: "Update mutation using code"
+  gqlmutation: |
+    mutation updateState($patch: UpdateStateInput!) {
+      updateState(input: $patch) {
+        state {
+          name
+        }
+      }
+    }
+  gqlvariables: |
+    { "patch":
+      { "filter": {
+          "code": { "eq": "nsw" }
+        },
+        "set": {
+          "name": "nsw"
+        }
+      }
+    }
+  explanation: "The update mutation should get rewritten into a Dgraph upsert mutation"
+  dgmutations:
+    - setjson: |
+        { "uid" : "uid(x)",
+          "State.name": "nsw"
+        }
+      cond: "@if(gt(len(x), 0))"
+  dgquery: |-
+    query {
+      x as updateState(func: type(State)) @filter(eq(State.code, "nsw")) {
+        uid
+      }
+    }
+
+-
+  name: "Update mutation using code on type which also has an ID field"
+  gqlmutation: |
+    mutation updateEditor($patch: UpdateEditorInput!) {
+      updateEditor(input: $patch) {
+        editor {
+          name
+        }
+      }
+    }
+  gqlvariables: |
+    { "patch":
+      { "filter": {
+          "code": { "eq": "editor" },
+          "id": [ "0x1", "0x2" ]
+        },
+        "set": {
+          "name": "A.N. Editor"
+        }
+      }
+    }
+  explanation: "The update mutation should get rewritten into a Dgraph upsert mutation"
+  dgmutations:
+    - setjson: |
+        { "uid" : "uid(x)",
+          "Editor.name": "A.N. Editor"
+        }
+      cond: "@if(gt(len(x), 0))"
+  dgquery: |-
+    query {
+      x as updateEditor(func: type(Editor)) @filter((eq(Editor.code, "editor") AND uid(0x1, 0x2))) {
+        uid
+      }
+    }
+
+-
+  name: "Update add reference"
+  gqlmutation: |
+    mutation updateAuthor($patch: UpdateAuthorInput!) {
+      updateAuthor(input: $patch) {
+        author {
+          id
+        }
+      }
+    }
+  gqlvariables: |
+    { "patch":
+      { "filter": {
+          "id": ["0x123"]
+        },
+        "set": {
+          "posts": [ { "postID": "0x456" } ]
+        }
+      }
+    }
+  dgmutations:
+    - setjson: |
+        { "uid" : "uid(x)",
+          "Author.posts": [
+            {
+              "uid": "0x456",
+              "Post.author": { "uid": "uid(x)" }
+            }
+          ]
+        }
+      deletejson: |
+        [
+          {
+            "uid": "uid(Author3)",
+            "Author.posts": [{"uid": "uid(Post2)"}]
+          }
+        ]
+      cond: "@if(eq(len(Post2), 1) AND gt(len(x), 0))"
+  dgquery: |-
+    query {
+      x as updateAuthor(func: type(Author)) @filter(uid(0x123)) {
+        uid
+      }
+      Post2 as Post2(func: uid(0x456)) @filter(type(Post)) {
+        uid
+      }
+      var(func: uid(Post2)) {
+        Author3 as Post.author @filter(NOT (uid(x)))
+      }
+    }
+
+-
+  name: "Update remove without XID or ID"
+  gqlmutation: |
+    mutation updateComputer($patch: UpdateComputerInput!) {
+      updateComputer(input: $patch) {
+        computer {
+          name
+        }
+      }
+    }
+  gqlvariables: |
+    { "patch":
+      { "filter": {
+              "name": {"eq": "computerName"}
+        },
+        "remove": {
+                "owners": [{
+                        "nickName": "temp"
+                }]
+        }
+      }
+    }
+  explanation: "Remove requires an XID or ID"
+  error:
+    { "message":
+      "failed to rewrite mutation payload because name is not provided" }
+
+-
+  name: "Update remove with XID"
+  gqlmutation: |
+    mutation updateComputer($patch: UpdateComputerInput!) {
+      updateComputer(input: $patch) {
+        computer {
+          name
+        }
+      }
+    }
+  gqlvariables: |
+    { "patch":
+      { "filter": {
+              "name": {"eq": "computerName"}
+        },
+        "remove": {
+                "owners": [{
+                        "name": "computerOwnerName",
+                        "nickName": "temp"
+                }]
+        }
+      }
+    }
+  dgmutations:
+    - deletejson: |
+        {
+                "Computer.owners": [{
+                        "uid" : "uid(ComputerOwner2)",
+                        "ComputerOwner.computers": {
+                                "uid": "uid(x)"
+                        }
+                }],
+                "uid" : "uid(x)"
+        }
+      cond: "@if(eq(len(ComputerOwner2), 1) AND gt(len(x), 0))"
+  dgquery: |-
+    query {
+      x as updateComputer(func: type(Computer)) @filter(eq(Computer.name, "computerName")) {
+        uid
+      }
+      ComputerOwner2 as ComputerOwner2(func: eq(ComputerOwner.name, "computerOwnerName")) @filter(type(ComputerOwner)) {
+        uid
+      }
+    }
+
+
+-
+  name: "Update remove with ID"
+  gqlmutation: |
+    mutation updateAuthor($patch: UpdateAuthorInput!) {
+      updateAuthor(input: $patch) {
+        author {
+          id
+        }
+      }
+    }
+  gqlvariables: |
+    { "patch":
+      { "filter": {
+          "id": ["0x123"]
+        },
+        "remove": {
+          "posts": [{"postID": "0x124", "title": "random title"}]
+        }
+      }
+    }
+  dgmutations:
+    - deletejson: |
+        { 
+                "Author.posts": [{
+                        "uid" : "0x124",
+                        "Post.author": {
+                                "uid": "uid(x)"
+                        }
+                }],
+                "uid" : "uid(x)"
+        }
+      cond: "@if(eq(len(Post2), 1) AND gt(len(x), 0))"
+  dgquery: |-
+    query {
+      x as updateAuthor(func: type(Author)) @filter(uid(0x123)) {
+        uid
+      }
+      Post2 as Post2(func: uid(0x124)) @filter(type(Post)) {
+        uid
+      }
+    }
+
+
+-
+  name: "Update remove reference"
+  gqlmutation: |
+    mutation updateAuthor($patch: UpdateAuthorInput!) {
+      updateAuthor(input: $patch) {
+        author {
+          id
+        }
+      }
+    }
+  gqlvariables: |
+    { "patch":
+      { "filter": {
+          "id": ["0x123"]
+        },
+        "remove": {
+          "posts": [ { "postID": "0x456" } ]
+        }
+      }
+    }
+  dgmutations:
+    - deletejson: |
+        { "uid" : "uid(x)",
+          "Author.posts": [
+            {
+              "uid": "0x456",
+              "Post.author": { "uid": "uid(x)" }
+            }
+          ]
+        }
+      cond: "@if(eq(len(Post2), 1) AND gt(len(x), 0))"
+  dgquery: |-
+    query {
+      x as updateAuthor(func: type(Author)) @filter(uid(0x123)) {
+        uid
+      }
+      Post2 as Post2(func: uid(0x456)) @filter(type(Post)) {
+        uid
+      }
+    }
+
+-
+  name: "Update add and remove together"
+  gqlmutation: |
+    mutation updateAuthor($patch: UpdateAuthorInput!) {
+      updateAuthor(input: $patch) {
+        author {
+          id
+        }
+      }
+    }
+  gqlvariables: |
+    { "patch":
+      { "filter": {
+          "id": ["0x123"]
+        },
+        "set": {
+          "posts": [ { "postID": "0x456" } ]
+        },
+        "remove": {
+          "posts": [ { "postID": "0x789" } ]
+        }
+      }
+    }
+  dgmutations:
+    - setjson: |
+        { "uid" : "uid(x)",
+          "Author.posts": [
+            {
+              "uid": "0x456",
+              "Post.author": { "uid": "uid(x)" }
+            }
+          ]
+        }
+      deletejson: |
+        [
+          {
+            "uid": "uid(Author3)",
+            "Author.posts": [{"uid": "uid(Post2)"}]
+          }
+        ]
+      cond: "@if(eq(len(Post2), 1) AND gt(len(x), 0))"
+    - deletejson: |
+        { "uid" : "uid(x)",
+          "Author.posts": [
+            {
+              "uid": "0x789",
+              "Post.author": { "uid": "uid(x)" }
+            }
+          ]
+        }
+      cond: "@if(eq(len(Post5), 1) AND gt(len(x), 0))"
+  dgquery: |-
+    query {
+      x as updateAuthor(func: type(Author)) @filter(uid(0x123)) {
+        uid
+      }
+      Post2 as Post2(func: uid(0x456)) @filter(type(Post)) {
+        uid
+      }
+      var(func: uid(Post2)) {
+        Author3 as Post.author @filter(NOT (uid(x)))
+      }
+      Post5 as Post5(func: uid(0x789)) @filter(type(Post)) {
+        uid
+      }
+    }
+
+-
+  name: "Deep updates don't alter linked objects"
+  gqlmutation: |
+    mutation updateAuthor($patch: UpdateAuthorInput!) {
+      updateAuthor(input: $patch) {
+        author {
+          id
+        }
+      }
+    }
+  gqlvariables: |
+    { "patch":
+      { "filter": {
+          "id": ["0x123"]
+        },
+        "set": {
+          "posts": [ {
+            "postID": "0x456",
+            "title": "A new title",
+            "text": "Some edited text"
+          } ]
+        }
+      }
+    }
+  explanation: "updateAuthor doesn't update posts except where references are removed"
+  dgmutations:
+    - setjson: |
+        { "uid" : "uid(x)",
+          "Author.posts": [
+            {
+              "uid": "0x456",
+              "Post.author": { "uid": "uid(x)" }
+            }
+          ]
+        }
+      deletejson: |
+        [
+          {
+            "uid": "uid(Author3)",
+            "Author.posts": [{"uid": "uid(Post2)"}]
+          }
+        ]
+      cond: "@if(eq(len(Post2), 1) AND gt(len(x), 0))"
+  dgquery: |-
+    query {
+      x as updateAuthor(func: type(Author)) @filter(uid(0x123)) {
+        uid
+      }
+      Post2 as Post2(func: uid(0x456)) @filter(type(Post)) {
+        uid
+      }
+      var(func: uid(Post2)) {
+        Author3 as Post.author @filter(NOT (uid(x)))
+      }
+    }
+
+-
+  name: "Deep update"
+  gqlmutation: |
+    mutation updateAuthor($patch: UpdateAuthorInput!) {
+      updateAuthor(input: $patch) {
+        author {
+          id
+        }
+      }
+    }
+  gqlvariables: |
+    { "patch":
+      { "filter": {
+          "id": ["0x123"]
+        },
+        "set": {
+          "country": {
+            "name": "New Country"
+          }
+        }
+      }
+    }
+  explanation: "The update creates a new country"
+  dgmutations:
+    - setjson: |
+        { "uid" : "uid(x)",
+          "Author.country": {
+            "uid": "_:Country2",
+            "dgraph.type": ["Country"],
+            "Country.name": "New Country"
+          }
+        }
+      cond: "@if(gt(len(x), 0))"
+  dgquery: |-
+    query {
+      x as updateAuthor(func: type(Author)) @filter(uid(0x123)) {
+        uid
+      }
+    }
+
+-
+  name: "Deep xid create options"
+  gqlmutation: |
+    mutation updateAuthor($patch: UpdateAuthorInput!) {
+      updateAuthor(input: $patch) {
+        author {
+          id
+        }
+      }
+    }
+  gqlvariables: |
+    { "patch":
+      { "filter": {
+          "id": ["0x123"]
+        },
+        "set": {
+          "country": {
+            "name": "New Country",
+            "states": [ {
+              "code": "dg",
+              "name": "Dgraph"
+            } ]
+          }
+        }
+      }
+    }
+  explanation: "The update has a choice of linking to new or existing state"
+  dgmutations:
+    - setjson: |
+        { "uid" : "uid(x)",
+          "Author.country": {
+            "uid": "_:Country2",
+            "dgraph.type": ["Country"],
+            "Country.name": "New Country",
+            "Country.states": [ {
+              "uid": "_:State3",
+              "dgraph.type": ["State"],
+              "State.code": "dg",
+              "State.name": "Dgraph",
+              "State.country": {
+                "uid": "_:Country2"
+              }
+            } ]
+          }
+        }
+      cond: "@if(eq(len(State3), 0) AND gt(len(x), 0))"
+    - setjson: |
+        { "uid" : "uid(x)",
+          "Author.country": {
+            "uid": "_:Country2",
+            "dgraph.type": ["Country"],
+            "Country.name": "New Country",
+            "Country.states": [ {
+              "uid": "uid(State3)",
+              "State.country": {
+                "uid": "_:Country2"
+              }
+            } ]
+          }
+        }
+      deletejson: |
+        [
+          {
+            "uid": "uid(Country4)",
+            "Country.states": [{"uid": "uid(State3)"}]
+          }
+        ]
+      cond: "@if(eq(len(State3), 1) AND gt(len(x), 0))"
+  dgquery: |-
+    query {
+      x as updateAuthor(func: type(Author)) @filter(uid(0x123)) {
+        uid
+      }
+      State3 as State3(func: eq(State.code, "dg")) @filter(type(State)) {
+        uid
+      }
+      var(func: uid(State3)) {
+        Country4 as State.country
+      }
+    }
+
+-
+  name: "Deep xid link only"
+  gqlmutation: |
+    mutation updateAuthor($patch: UpdateAuthorInput!) {
+      updateAuthor(input: $patch) {
+        author {
+          id
+        }
+      }
+    }
+  gqlvariables: |
+    { "patch":
+      { "filter": {
+          "id": ["0x123"]
+        },
+        "set": {
+          "country": {
+            "name": "New Country",
+            "states": [ {
+              "code": "dg"
+            } ]
+          }
+        }
+      }
+    }
+  explanation: "The update must link to the existing state"
+  dgmutations:
+    - setjson: |
+        { "uid" : "uid(x)",
+          "Author.country": {
+            "uid": "_:Country2",
+            "dgraph.type": ["Country"],
+            "Country.name": "New Country",
+            "Country.states": [ {
+              "uid": "uid(State3)",
+              "State.country": {
+                "uid": "_:Country2"
+              }
+            } ]
+          }
+        }
+      deletejson: |
+        [
+          {
+            "uid": "uid(Country4)",
+            "Country.states": [{"uid": "uid(State3)"}]
+          }
+        ]
+      cond: "@if(eq(len(State3), 1) AND gt(len(x), 0))"
+  dgquery: |-
+    query {
+      x as updateAuthor(func: type(Author)) @filter(uid(0x123)) {
+        uid
+      }
+      State3 as State3(func: eq(State.code, "dg")) @filter(type(State)) {
+        uid
+      }
+      var(func: uid(State3)) {
+        Country4 as State.country
+      }
+    }
+
+-
+  name: "update two single edges"
+  gqlmutation: |
+    mutation updateOwner($patch: UpdateOwnerInput!) {
+      updateOwner(input: $patch) {
+        owner {
+          id
+        }
+      }
+    }
+  gqlvariables: |
+    { "patch":
+      { "filter": {
+          "id": ["0x123"]
+        },
+        "set": {
+          "house": {
+            "id": "0x456"
+          }
+        }
+      }
+    }
+  explanation: " Owner 0x123"
+  dgmutations:
+    - setjson: |
+        { "uid" : "uid(x)",
+          "Owner.house": {
+            "uid": "0x456",
+            "House.owner": { "uid": "uid(x)" }
+          }
+        }
+      deletejson: |
+        [
+          {
+            "uid": "uid(Owner3)",
+            "Owner.house": {"uid": "uid(House2)"}
+          },
+          {
+            "uid": "uid(House4)",
+            "House.owner": {"uid": "uid(x)"}
+          }
+        ]
+      cond: "@if(eq(len(House2), 1) AND gt(len(x), 0))"
+  dgquery: |-
+    query {
+      x as updateOwner(func: type(Owner)) @filter(uid(0x123)) {
+        uid
+      }
+      House2 as House2(func: uid(0x456)) @filter(type(House)) {
+        uid
+      }
+      var(func: uid(House2)) {
+        Owner3 as House.owner @filter(NOT (uid(x)))
+      }
+      var(func: uid(x)) {
+        House4 as Owner.house
+      }
+    }
+
+-
+  name: "Update add reference doesn't add reverse edge"
+  gqlmutation: |
+    mutation updateMovieDirector($patch: UpdateMovieDirectorInput!) {
+      updateMovieDirector(input: $patch) {
+        moviedirector {
+          id
+        }
+      }
+    }
+  gqlvariables: |
+    { "patch":
+      { "filter": {
+          "id": ["0x123"]
+        },
+        "set": {
+          "directed": [ { "id": "0x456" } ]
+        }
+      }
+    }
+  dgmutations:
+    - setjson: |
+        { "uid" : "uid(x)",
+          "directed.movies": [
+            {
+              "uid": "0x456"
+            }
+          ]
+        }
+      cond: "@if(eq(len(Movie2), 1) AND gt(len(x), 0))"
+  dgquery: |-
+    query {
+      x as updateMovieDirector(func: type(MovieDirector)) @filter(uid(0x123)) {
+        uid
+      }
+      Movie2 as Movie2(func: uid(0x456)) @filter(type(Movie)) {
+        uid
+      }
+    }
+
+-
+  name: "Update remove reference doesn't try to remove reverse edge."
+  gqlmutation: |
+    mutation updateMovieDirector($patch: UpdateMovieDirectorInput!) {
+      updateMovieDirector(input: $patch) {
+        moviedirector {
+          id
+        }
+      }
+    }
+  gqlvariables: |
+    { "patch":
+      { "filter": {
+          "id": ["0x123"]
+        },
+        "remove": {
+          "directed": [ { "id": "0x456" } ]
+        }
+      }
+    }
+  dgmutations:
+    - deletejson: |
+        { "uid" : "uid(x)",
+          "directed.movies": [
+            {
+              "uid": "0x456"
+            }
+          ]
+        }
+      cond: "@if(eq(len(Movie2), 1) AND gt(len(x), 0))"
+  dgquery: |-
+    query {
+      x as updateMovieDirector(func: type(MovieDirector)) @filter(uid(0x123)) {
+        uid
+      }
+      Movie2 as Movie2(func: uid(0x456)) @filter(type(Movie)) {
+        uid
+      }
+    }
