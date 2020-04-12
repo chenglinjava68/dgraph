@@ -1,0 +1,21 @@
+type Car @remote {
+    id: ID!
+    name: String!
+}
+
+interface Person @remote {
+    age: Int!
+}
+
+type User implements Person @remote {
+    id: ID!
+    name: String!
+    cars: [Car]
+}
+
+type Query {
+    getMyFavoriteUsers(id: ID!): [User] @custom(http: {
+        url: "http://my-api.com",
+        method: "GET"
+    })
+}
